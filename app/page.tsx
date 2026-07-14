@@ -13,6 +13,11 @@ type Risk = "low" | "medium" | "high";
 type MapTool = "select" | "draw" | "gate";
 type FenceId = "electric" | "barbed" | "woven" | "game";
 
+type LandAnalysis = {
+  terrain: { elevationFeet: number | null; status: string; disclaimer: string };
+  sources: Array<{ id: string; label: string; status: "live" | "configured" | "unavailable"; url: string }>;
+};
+
 type FenceLine = {
   id: string;
   name: string;
@@ -424,6 +429,9 @@ export default function Home() {
   const [mobilization, setMobilization] = useState(2400);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [proposalOpen, setProposalOpen] = useState(false);
+  const [diggingAcknowledged, setDiggingAcknowledged] = useState(false);
+  const [landAnalysis, setLandAnalysis] = useState<LandAnalysis | null>(null);
+  const [landAnalysisState, setLandAnalysisState] = useState<"idle" | "loading" | "error">("idle");
 
   const allLines = useMemo(() => [...boundaryLines, ...crossLines, ...customLines], [customLines]);
   const selectedLines = useMemo(() => allLines.filter((line) => selectedIds.includes(line.id)), [allLines, selectedIds]);
@@ -468,14 +476,26 @@ export default function Home() {
 
   const estimate = calculateEstimate(fenceId);
 
-  function findProperty() {
+  async function findProperty() {
     if (!address.trim()) return;
     setFinding(true);
-    window.setTimeout(() => {
+    setLandAnalysisState("loading");
+    try {
+      const response = await fetch("/api/land-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude: 31.9825, longitude: -98.0336, parcelId: "01-3842-017" }),
+      });
+      if (!response.ok) throw new Error("Land analysis unavailable");
+      setLandAnalysis(await response.json() as LandAnalysis);
+      setLandAnalysisState("idle");
+    } catch {
+      setLandAnalysisState("error");
+    } finally {
       setFinding(false);
       setPropertyFound(true);
       setStep(2);
-    }, 650);
+    }
   }
 
   function toggleLine(id: string) {
@@ -600,7 +620,7 @@ export default function Home() {
           <div className="property-intel">
             <div><span>Parcel area</span><strong>417.8 ac</strong><small>Regrid parcel</small></div>
             <div><span>Pasture cover</span><strong>78%</strong><small>USDA land cover</small></div>
-            <div><span>Average slope</span><strong>6.2%</strong><small>USGS elevation</small></div>
+            <div><span>Elevation</span><strong>{landAnalysis?.terrain.elevationFeet ? `${Math.round(landAnalysis.terrain.elevationFeet).toLocaleString()} ft` : "Checking…"}</strong><small>USGS 3DEP · estimate</small></div>
             <div><span>Primary soil</span><strong>Clay loam</strong><small>NRCS soil data</small></div>
             <div><span>Water features</span><strong>2 crossings</strong><small>Hydrography</small></div>
             <button><span>＋</span><strong>Add parcel</strong><small>Combine another APN</small></button>
@@ -707,17 +727,35 @@ export default function Home() {
                 <b>On target</b>
               </div>
 
+              <section className="site-safety" aria-labelledby="site-safety-title">
+                <div className="safety-icon" aria-hidden="true">!</div>
+                <div>
+                  <p className="eyebrow">Required before digging</p>
+                  <h3 id="site-safety-title">Call 811 before you dig</h3>
+                  <p>Utilities are not included in map data. Contact 811 and wait for all utility responses before post holes, trenching, clearing, or ground-engaging equipment.</p>
+                  <label>
+                    <input type="checkbox" checked={diggingAcknowledged} onChange={(event) => setDiggingAcknowledged(event.target.checked)} />
+                    I understand this quote is an estimate and 811 is required before excavation.
+                  </label>
+                </div>
+              </section>
+
+              <section className="data-status" aria-label="Land data status">
+                <div><strong>Land-data screening</strong><span>{landAnalysisState === "loading" ? "Checking public layers…" : landAnalysisState === "error" ? "Some layers are temporarily unavailable" : "Estimate-only public layers"}</span></div>
+                {landAnalysis?.sources.slice(0, 4).map((source) => <a key={source.id} href={source.url} target="_blank" rel="noreferrer">{source.status === "live" ? "●" : "○"} {source.label}</a>)}
+              </section>
+
               {step === 2 ? (
-                <button className="primary-action" onClick={() => setStep(3)} disabled={!feet}>
+                <button className="primary-action" onClick={() => setStep(3)} disabled={!feet || !diggingAcknowledged}>
                   Review customer quote <Chevron />
                 </button>
               ) : (
                 <div className="quote-actions">
                   <button className="secondary-action" onClick={() => setStep(2)}>Keep editing</button>
-                  <button className="primary-action" onClick={() => setProposalOpen(true)}>Create proposal <Chevron /></button>
+                  <button className="primary-action" onClick={() => setProposalOpen(true)} disabled={!diggingAcknowledged}>Create proposal <Chevron /></button>
                 </div>
               )}
-              <p className="estimate-note">Planning estimate only. Verify route, access and legal boundaries before construction.</p>
+              <p className="estimate-note">Planning estimate only. Verify route, access, utilities, legal boundaries and field conditions before construction.</p>
             </aside>
           </div>
         </section>
@@ -775,6 +813,7 @@ export default function Home() {
               <div><span>Site allowance</span><strong>{money.format(estimate.conditions)} for mapped terrain conditions</strong></div>
               <div><span>Schedule</span><strong>Approximately {estimate.days} working days after mobilization</strong></div>
             </div>
+            <div className="proposal-safety-note"><strong>Required before digging:</strong> Contact 811 and wait for all utility responses before excavation, post installation, trenching, clearing, or ground-engaging equipment. Terrain, water, flood, wetlands and soil layers are planning estimates only and require field verification.</div>
             <div className="proposal-footer">
               <p>Final price subject to boundary and field verification.</p>
               <div><button className="secondary-action" onClick={() => setProposalOpen(false)}>Keep editing</button><button className="primary-action" onClick={() => window.print()}>Print or save PDF</button></div>

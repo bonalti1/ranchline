@@ -98,6 +98,17 @@ h1, h2, h3, p { margin-top: 0; }
 .property-intel small { color: #959a95; font-size: 7px; }
 .property-intel > button { border-right: 0; color: var(--forest); display: grid; grid-template-columns: 23px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 7px; }
 .property-intel > button span { grid-row: 1 / 3; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #e6eee9; font-size: 13px; }
+.terrain-intelligence { display: grid; grid-template-columns: 1.05fr .9fr 1.15fr; align-items: center; gap: 18px; margin: -2px 0 14px; padding: 14px 17px; border: 1px solid #d9d3c5; border-radius: 13px; background: linear-gradient(105deg, #173a2e, #28543f); color: #fff; box-shadow: 0 12px 26px rgba(20,55,43,.12); }
+.terrain-title .eyebrow { color: #d8b670; }
+.terrain-title h2 { max-width: 290px; margin: 3px 0; font-family: Georgia, serif; font-size: 18px; font-weight: 500; letter-spacing: -.025em; }
+.terrain-title small { color: #b9c9be; font-size: 7px; line-height: 1.35; }
+.terrain-profile { padding: 7px; border: 1px solid rgba(255,255,255,.13); border-radius: 8px; background: rgba(255,255,255,.05); }
+.terrain-profile svg { display: block; width: 100%; height: 66px; }
+.terrain-metrics { display: grid; grid-template-columns: repeat(4, 1fr); border-left: 1px solid rgba(255,255,255,.14); }
+.terrain-metrics div { padding: 3px 9px; border-right: 1px solid rgba(255,255,255,.14); }
+.terrain-metrics span, .terrain-metrics strong { display: block; }
+.terrain-metrics span { color: #adc2b3; font-size: 6px; text-transform: uppercase; letter-spacing: .05em; }
+.terrain-metrics strong { margin-top: 4px; color: #fff; font-size: 11px; white-space: nowrap; }
 
 .estimator-layout { display: grid; grid-template-columns: minmax(580px, 1.55fr) minmax(340px, .65fr); gap: 14px; align-items: start; }
 .map-panel, .estimate-panel { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 12px 34px rgba(31,48,39,.05); }
@@ -113,6 +124,11 @@ h1, h2, h3, p { margin-top: 0; }
 .map-presets, .map-tools { display: flex; gap: 5px; align-items: center; }
 .map-actions button { min-height: 31px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: #4a544d; font-size: 8px; font-weight: 850; white-space: nowrap; }
 .map-actions button:hover, .map-actions button.active { border-color: var(--forest); background: #edf3ef; color: var(--forest); }
+.map-view-switcher { display: flex; align-items: center; gap: 5px; padding: 7px 10px; border-bottom: 1px solid var(--line); background: #f8f7f1; }
+.map-view-switcher > span { margin-right: 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-size: 7px; font-weight: 900; }
+.map-view-switcher button { min-height: 25px; padding: 0 9px; border: 1px solid #d4d3ca; border-radius: 999px; background: #fff; color: #5f6961; font-size: 7px; font-weight: 900; text-transform: capitalize; }
+.map-view-switcher button.active { border-color: var(--forest); background: var(--forest); color: #fff; }
+.map-view-switcher small { margin-left: auto; color: var(--muted); font-size: 7px; }
 .canvas-shell { position: relative; min-height: 430px; aspect-ratio: 1000 / 620; overflow: hidden; background: #72805a; }
 .google-map-base { position: absolute; inset: 0; z-index: 0; }
 .canvas-shell canvas { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; display: block; touch-action: none; }

@@ -12,6 +12,7 @@ import {
 type Point = { x: number; y: number };
 type Risk = "low" | "medium" | "high";
 type MapTool = "select" | "draw" | "gate";
+type MapView = "satellite" | "hybrid" | "terrain";
 type FenceId = "electric" | "barbed" | "woven" | "game";
 
 type GoogleMaps = {
@@ -21,14 +22,14 @@ type GoogleMaps = {
   };
 };
 
-type GoogleMapInstance = { setCenter(center: { lat: number; lng: number }): void; setZoom(zoom: number): void };
+type GoogleMapInstance = { setCenter(center: { lat: number; lng: number }): void; setZoom(zoom: number): void; setMapTypeId(mapTypeId: MapView): void };
 
 declare global {
   interface Window { google?: GoogleMaps }
 }
 
 type LandAnalysis = {
-  terrain: { elevationFeet: number | null; status: string; disclaimer: string };
+  terrain: { elevationFeet: number | null; status: string; disclaimer: string; profile: number[]; elevationRange: { lowFeet: number; highFeet: number; reliefFeet: number; estimatedMaxGrade: number } | null };
   sources: Array<{ id: string; label: string; status: "live" | "configured" | "unavailable"; url: string }>;
 };
 
@@ -173,6 +174,7 @@ function RanchMap({
   const googleMapRef = useRef<HTMLDivElement>(null);
   const googleMapInstanceRef = useRef<GoogleMapInstance | null>(null);
   const [draft, setDraft] = useState<Point[]>([]);
+  const [mapView, setMapView] = useState<MapView>("hybrid");
   const [mapState, setMapState] = useState<"loading" | "ready" | "missing" | "error">("loading");
 
   useEffect(() => {
@@ -216,6 +218,10 @@ function RanchMap({
     script.onerror = () => setMapState("error");
     document.head.appendChild(script);
   }, []);
+
+  useEffect(() => {
+    googleMapInstanceRef.current?.setMapTypeId(mapView);
+  }, [mapView]);
 
   useEffect(() => {
     if (mapState !== "ready" || !window.google?.maps || !googleMapInstanceRef.current || !address.trim()) return;
@@ -458,6 +464,13 @@ function RanchMap({
           <button className={tool === "gate" ? "active" : ""} onClick={() => onToolChange("gate")} aria-pressed={tool === "gate"}>＋ Add gate</button>
           <button onClick={undo} aria-label="Undo last map action">↶ Undo</button>
         </div>
+      </div>
+      <div className="map-view-switcher" aria-label="Map view controls">
+        <span>Land view</span>
+        {(["satellite", "hybrid", "terrain"] as MapView[]).map((view) => (
+          <button key={view} className={mapView === view ? "active" : ""} onClick={() => setMapView(view)}>{view}</button>
+        ))}
+        <small>{mapView === "terrain" ? "Topography and grade context" : mapView === "satellite" ? "Clean aerial imagery" : "Aerial imagery with access roads"}</small>
       </div>
 
       <div className={`canvas-shell tool-${tool}`}>
@@ -712,6 +725,19 @@ export default function Home() {
             <div><span>Water features</span><strong>2 crossings</strong><small>Hydrography</small></div>
             <button><span>＋</span><strong>Add parcel</strong><small>Combine another APN</small></button>
           </div>
+
+          {landAnalysis?.terrain.elevationRange && (
+            <section className="terrain-intelligence" aria-label="Property terrain scan">
+              <div className="terrain-title"><p className="eyebrow">Property terrain scan</p><h2>See the low ground, high ground and job difficulty</h2><small>USGS 3DEP screening scan around the searched address · field verification required</small></div>
+              <div className="terrain-profile">
+                <svg viewBox="0 0 240 68" preserveAspectRatio="none" aria-label="Elevation profile">
+                  <defs><linearGradient id="terrain-fill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#e1aa4f" stopOpacity=".55" /><stop offset="1" stopColor="#e1aa4f" stopOpacity=".04" /></linearGradient></defs>
+                  {(() => { const values = landAnalysis.terrain.profile; const low = Math.min(...values); const high = Math.max(...values); const range = Math.max(1, high - low); const points = values.map((value, index) => `${(index / Math.max(1, values.length - 1)) * 240},${58 - ((value - low) / range) * 45}`).join(" "); return <><polygon points={`0,68 ${points} 240,68`} fill="url(#terrain-fill)" /><polyline points={points} fill="none" stroke="#c2613f" strokeWidth="3" strokeLinejoin="round" /></>; })()}
+                </svg>
+              </div>
+              <div className="terrain-metrics"><div><span>Low point</span><strong>{Math.round(landAnalysis.terrain.elevationRange.lowFeet).toLocaleString()} ft</strong></div><div><span>High point</span><strong>{Math.round(landAnalysis.terrain.elevationRange.highFeet).toLocaleString()} ft</strong></div><div><span>Relief</span><strong>{Math.round(landAnalysis.terrain.elevationRange.reliefFeet)} ft</strong></div><div><span>Terrain grade</span><strong>{landAnalysis.terrain.elevationRange.estimatedMaxGrade < 5 ? "Easy" : landAnalysis.terrain.elevationRange.estimatedMaxGrade < 12 ? "Rolling" : "Steep"}</strong></div></div>
+            </section>
+          )}
 
           <div className="estimator-layout">
             <section className="map-panel">

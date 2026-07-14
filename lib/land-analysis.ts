@@ -78,6 +78,12 @@ async function elevationAt(latitude: number, longitude: number) {
   return value;
 }
 
+function metersBetween(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+  const latitudeScale = 111_320;
+  const longitudeScale = latitudeScale * Math.cos(((a.latitude + b.latitude) / 2) * Math.PI / 180);
+  return Math.hypot((a.latitude - b.latitude) * latitudeScale, (a.longitude - b.longitude) * longitudeScale);
+}
+
 /**
  * Public-layer adapter. Keep calls server-side so public GIS providers are not
  * hit directly from browsers and so results can later be cached per parcel.
@@ -88,9 +94,27 @@ export async function analyzeLand(input: LandAnalysisInput) {
   }
 
   let elevationFeet: number | null = null;
+  let profile: number[] = [];
+  let elevationRange: { lowFeet: number; highFeet: number; reliefFeet: number; estimatedMaxGrade: number } | null = null;
   let elevationStatus: LandSource["status"] = "unavailable";
   try {
-    elevationFeet = await elevationAt(input.latitude, input.longitude);
+    const offsets = [-0.0012, 0, 0.0012];
+    const points = offsets.flatMap((latitudeOffset) => offsets.map((longitudeOffset) => ({
+      latitude: input.latitude + latitudeOffset,
+      longitude: input.longitude + longitudeOffset,
+    })));
+    const values = await Promise.all(points.map((point) => elevationAt(point.latitude, point.longitude)));
+    elevationFeet = values[4];
+    profile = values;
+    const lowFeet = Math.min(...values);
+    const highFeet = Math.max(...values);
+    const diagonalMeters = metersBetween(points[0], points[8]);
+    elevationRange = {
+      lowFeet,
+      highFeet,
+      reliefFeet: highFeet - lowFeet,
+      estimatedMaxGrade: diagonalMeters ? ((highFeet - lowFeet) * 0.3048 / diagonalMeters) * 100 : 0,
+    };
     elevationStatus = "live";
   } catch {
     // Other public layers are deliberately reported as configured until their
@@ -108,6 +132,8 @@ export async function analyzeLand(input: LandAnalysisInput) {
     generatedAt: new Date().toISOString(),
     terrain: {
       elevationFeet,
+      elevationRange,
+      profile,
       status: elevationFeet === null ? "Elevation service unavailable; retry before relying on terrain data." : "Point elevation returned from USGS 3DEP.",
       disclaimer: "Planning estimate only. Elevations are interpolated and are not a boundary, engineering, or construction survey.",
     },

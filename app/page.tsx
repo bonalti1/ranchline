@@ -13,6 +13,16 @@ type Risk = "low" | "medium" | "high";
 type MapTool = "select" | "draw" | "gate";
 type FenceId = "electric" | "barbed" | "woven" | "game";
 
+type GoogleMaps = {
+  maps: {
+    Map: new (element: HTMLElement, options: Record<string, unknown>) => unknown;
+  };
+};
+
+declare global {
+  interface Window { google?: GoogleMaps }
+}
+
 type LandAnalysis = {
   terrain: { elevationFeet: number | null; status: string; disclaimer: string };
   sources: Array<{ id: string; label: string; status: "live" | "configured" | "unavailable"; url: string }>;
@@ -152,7 +162,51 @@ function RanchMap({
   onUndo: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const googleMapRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState<Point[]>([]);
+  const [mapState, setMapState] = useState<"loading" | "ready" | "missing" | "error">("loading");
+
+  useEffect(() => {
+    const target = googleMapRef.current;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!target || !apiKey) {
+      setMapState("missing");
+      return;
+    }
+
+    const startMap = () => {
+      if (!window.google?.maps || !googleMapRef.current) return;
+      new window.google.maps.Map(googleMapRef.current, {
+        center: { lat: 31.9825, lng: -98.0336 },
+        zoom: 15,
+        mapTypeId: "hybrid",
+        mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || undefined,
+        disableDefaultUI: true,
+        gestureHandling: "greedy",
+      });
+      setMapState("ready");
+    };
+
+    if (window.google?.maps) {
+      startMap();
+      return;
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-ranchline-google-maps="true"]');
+    if (existing) {
+      existing.addEventListener("load", startMap, { once: true });
+      existing.addEventListener("error", () => setMapState("error"), { once: true });
+      return () => existing.removeEventListener("load", startMap);
+    }
+
+    const script = document.createElement("script");
+    script.dataset.ranchlineGoogleMaps = "true";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly`;
+    script.async = true;
+    script.onload = startMap;
+    script.onerror = () => setMapState("error");
+    document.head.appendChild(script);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -163,6 +217,9 @@ function RanchMap({
     canvas.width = MAP_WIDTH;
     canvas.height = MAP_HEIGHT;
 
+    // The real Google satellite layer is below this transparent drawing canvas.
+    // Demo terrain art remains here as a no-key fallback only.
+    if (mapState !== "ready") {
     const background = context.createLinearGradient(0, 0, MAP_WIDTH, MAP_HEIGHT);
     background.addColorStop(0, "#687b52");
     background.addColorStop(0.48, "#8e9667");
@@ -231,6 +288,8 @@ function RanchMap({
     context.setLineDash([18, 18]);
     context.stroke();
     context.setLineDash([]);
+
+    }
 
     drawPolygon(context, parcel);
     context.fillStyle = "rgba(239, 227, 174, .11)";
@@ -314,7 +373,7 @@ function RanchMap({
     context.fillText("417.8 ACRES", 455, 290);
     context.font = "700 10px system-ui";
     context.fillText("CR 418", 465, 565);
-  }, [allLines, draft, gates, selectedIds]);
+  }, [allLines, draft, gates, mapState, selectedIds]);
 
   function mapPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -381,11 +440,13 @@ function RanchMap({
       </div>
 
       <div className={`canvas-shell tool-${tool}`}>
+        <div ref={googleMapRef} className="google-map-base" aria-label="Google satellite map" />
         <canvas
           ref={canvasRef}
           onPointerDown={handlePointer}
           aria-label="Interactive ranch map. Select property edges, draw cross-fences, or place gates."
         />
+        {mapState !== "ready" && <div className="map-provider-status">{mapState === "loading" ? "Loading satellite map…" : mapState === "missing" ? "Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in Render to enable Google Maps" : "Google Maps could not load — check key restrictions and enabled APIs"}</div>}
         <div className="map-mode-tip">
           {tool === "select" && "Click a fence segment to include or remove it"}
           {tool === "draw" && "Click points along the route, then finish the line"}

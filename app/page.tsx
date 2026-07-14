@@ -685,12 +685,13 @@ export default function Home() {
             </div>
             <button className="sample-link" onClick={() => setAddress("16710 Ranch Rd 965, Fredericksburg, TX 78624")}>Use live demo: Enchanted Rock area · Fredericksburg, TX</button>
 
-            <div className="how-it-works">
-              <div><span>1</span><strong>Find</strong><small>Parcel + land data</small></div>
-              <i />
-              <div><span>2</span><strong>Plan</strong><small>Draw lines + gates</small></div>
-              <i />
-              <div><span>3</span><strong>Quote</strong><small>Takeoff + proposal</small></div>
+            <div className="land-proof">
+              <div className="land-proof-head"><span>What RanchLine reads before you price</span><b>Built for fence + land-clearing teams</b></div>
+              <div className="land-proof-grid">
+                <div><i>⌁</i><strong>Parcel</strong><small>Boundary, acreage and access context</small></div>
+                <div><i>△</i><strong>Terrain</strong><small>Slope, water, soils and land cover</small></div>
+                <div><i>↗</i><strong>Buildability</strong><small>Conditions turned into quote allowances</small></div>
+              </div>
             </div>
           </div>
 

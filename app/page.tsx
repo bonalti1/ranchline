@@ -696,14 +696,20 @@ export default function Home() {
 
           <div className="hero-map">
             <img className="hero-terrain-image" src="/ranchline-hero-terrain-v2.png" alt="Aerial ranch view with premium parcel boundary, professional fence routes, pasture, brush and a difficult creek crossing" />
-            <div className="hero-map-label easy"><b>Easy</b><span>Pasture only</span></div>
-            <div className="hero-map-label brush"><b>Moderate</b><span>Brush clearing</span></div>
-            <div className="hero-map-label creek"><b>Difficult</b><span>Creek crossing</span></div>
-            <div className="hero-map-key"><span><i className="risk-low" /> Open pasture</span><span><i className="risk-medium" /> Brush</span><span><i className="risk-high" /> Creek / grade</span></div>
-            <div className="hero-quote">
-              <span>See what changes the price</span>
-              <strong>Know the land before you quote.</strong>
-              <small>Routes, brush, water crossings, slope and equipment access—explained in seconds.</small>
+            <div className="hero-intelligence-ui" aria-hidden="true">
+              <div className="hero-scan-head"><span><i /> LIVE LAND INTELLIGENCE</span><b>3 route conditions detected</b></div>
+              <svg className="hero-route-overlay" viewBox="0 0 1000 620" preserveAspectRatio="none">
+                <path className="hero-route easy-route" d="M 350 58 L 345 115 L 330 190 L 295 300 L 300 380 L 280 510" />
+                <path className="hero-route brush-route" d="M 565 155 L 610 225 L 590 305 L 650 390 L 605 500" />
+                <path className="hero-route creek-route" d="M 445 425 L 522 445 L 570 488" />
+                <circle className="route-pulse easy-pulse" cx="300" cy="380" r="11" />
+                <circle className="route-pulse brush-pulse" cx="650" cy="390" r="11" />
+                <circle className="route-pulse creek-pulse" cx="522" cy="445" r="11" />
+              </svg>
+              <div className="hero-map-label easy"><span className="route-dot" /><b>Easy</b><small>Pasture · 2,140 ft</small></div>
+              <div className="hero-map-label brush"><span className="route-dot" /><b>Moderate</b><small>Brush clearing · 1,880 ft</small></div>
+              <div className="hero-map-label creek"><span className="route-dot" /><b>Difficult</b><small>Creek crossing · 14% grade</small></div>
+              <div className="hero-value-card"><span>Quote confidence</span><strong>Conditions priced before the crew arrives.</strong><div><b>Pasture</b><b>Brush</b><b>Water</b><b>Slope</b></div></div>
             </div>
           </div>
         </section>

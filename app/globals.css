@@ -143,6 +143,14 @@ h1, h2, h3, p { margin-top: 0; }
 .map-legend span { display: flex; align-items: center; gap: 5px; }
 .map-legend i { width: 13px; height: 4px; border-radius: 5px; }
 .risk-low { background: var(--green); } .risk-medium { background: var(--amber); } .risk-high { background: var(--red); } .water-key { background: var(--water); }
+.segment-explainer { margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-left-width: 4px; border-radius: 9px; background: #fbfbf7; }
+.segment-explainer.low { border-left-color: var(--green); } .segment-explainer.medium { border-left-color: var(--amber); } .segment-explainer.high { border-left-color: var(--red); }
+.segment-explainer-title { display: flex; align-items: center; gap: 7px; }
+.segment-explainer-title strong { font-size: 9px; }
+.segment-explainer-title button { margin-left: auto; border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; }
+.segment-explainer > p { margin: 7px 0; color: #58625a; font-size: 8px; line-height: 1.45; }
+.segment-explainer > div:last-child { display: flex; flex-wrap: wrap; gap: 5px 8px; color: var(--muted); font-size: 7px; }
+.segment-explainer > div:last-child strong { color: var(--ink); font-size: 7px; }
 .segment-head { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 18px 3px 9px; }
 .segment-head h3 { margin: 0 0 2px; font-size: 12px; }
 .segment-head p { margin: 0; color: var(--muted); font-size: 8px; }

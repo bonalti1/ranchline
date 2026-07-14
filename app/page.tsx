@@ -156,6 +156,7 @@ function RanchMap({
   onUndo,
   address,
   onAddressResolved,
+  onInspectLine,
 }: {
   allLines: FenceLine[];
   selectedIds: string[];
@@ -169,6 +170,7 @@ function RanchMap({
   onUndo: () => void;
   address: string;
   onAddressResolved: (location: { latitude: number; longitude: number }) => void;
+  onInspectLine: (line: FenceLine) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const googleMapRef = useRef<HTMLDivElement>(null);
@@ -423,7 +425,10 @@ function RanchMap({
     const closest = allLines
       .map((line) => ({ line, distance: lineDistance(point, line) }))
       .sort((a, b) => a.distance - b.distance)[0];
-    if (closest && closest.distance < 32) onToggleLine(closest.line.id);
+    if (closest && closest.distance < 32) {
+      onToggleLine(closest.line.id);
+      onInspectLine(closest.line);
+    }
   }
 
   function finishDraft() {
@@ -518,6 +523,7 @@ export default function Home() {
     { id: "gate-2", x: 790, y: 515 },
   ]);
   const [tool, setTool] = useState<MapTool>("select");
+  const [inspectedLine, setInspectedLine] = useState<FenceLine | null>(null);
   const [fenceId, setFenceId] = useState<FenceId>("barbed");
   const [rates, setRates] = useState(initialRates);
   const [margin, setMargin] = useState(18);
@@ -570,6 +576,14 @@ export default function Home() {
   }
 
   const estimate = calculateEstimate(fenceId);
+
+  const difficultyExplanation = inspectedLine ? (
+    inspectedLine.risk === "high"
+      ? "This section has a major condition that can slow the crew or require different installation methods. Plan a field walk, confirm the crossing or grade, and include an allowance before work begins."
+      : inspectedLine.risk === "medium"
+        ? "This section has conditions that can add crew time or equipment work. The allowance is included in the estimate, but confirm conditions in the field before final pricing."
+        : "This section appears accessible and relatively straightforward from the current screening data. It still needs a field check for utilities, boundary accuracy, and ground conditions."
+  ) : null;
 
   async function findProperty() {
     if (!address.trim()) return;
@@ -762,7 +776,16 @@ export default function Home() {
                 onUndo={undoMapAction}
                 address={address}
                 onAddressResolved={analyzeCoordinates}
+                onInspectLine={setInspectedLine}
               />
+
+              {inspectedLine && (
+                <section className={`segment-explainer ${inspectedLine.risk}`} aria-live="polite">
+                  <div className="segment-explainer-title"><span className={`risk-badge ${inspectedLine.risk}`}>{inspectedLine.risk} difficulty</span><strong>{inspectedLine.name} · {inspectedLine.feet.toLocaleString()} ft</strong><button onClick={() => setInspectedLine(null)} aria-label="Close segment explanation">×</button></div>
+                  <p>{difficultyExplanation}</p>
+                  <div><span>Why:</span><strong>{inspectedLine.condition}</strong><span>Included allowance:</span><strong>{Math.round(riskRates[inspectedLine.risk] * 100)}% conditions factor</strong></div>
+                </section>
+              )}
 
               <div className="segment-head">
                 <div>
@@ -773,7 +796,7 @@ export default function Home() {
               </div>
               <div className="segment-list">
                 {selectedLines.length ? selectedLines.map((line, index) => (
-                  <button key={line.id} onClick={() => toggleLine(line.id)}>
+                  <button key={line.id} onClick={() => { toggleLine(line.id); setInspectedLine(line); }}>
                     <span className="segment-index" style={{ background: riskColors[line.risk] }}>{index + 1}</span>
                     <span><strong>{line.name}</strong><small>{line.condition}</small></span>
                     <span className={`risk-badge ${line.risk}`}>{line.risk}</span>

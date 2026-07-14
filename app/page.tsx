@@ -695,7 +695,7 @@ export default function Home() {
           </div>
 
           <div className="hero-map">
-            <img className="hero-terrain-image" src="/ranchline-hero-terrain.png" alt="Aerial ranch view showing easy pasture, brush route and difficult creek crossing fence conditions" />
+            <img className="hero-terrain-image" src="/ranchline-hero-terrain-v2.png" alt="Aerial ranch view with premium parcel boundary, professional fence routes, pasture, brush and a difficult creek crossing" />
             <div className="hero-map-label easy"><b>Easy</b><span>Pasture only</span></div>
             <div className="hero-map-label brush"><b>Moderate</b><span>Brush clearing</span></div>
             <div className="hero-map-label creek"><b>Difficult</b><span>Creek crossing</span></div>

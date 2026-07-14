@@ -2,6 +2,7 @@
 
 import {
   type PointerEvent as ReactPointerEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -15,9 +16,12 @@ type FenceId = "electric" | "barbed" | "woven" | "game";
 
 type GoogleMaps = {
   maps: {
-    Map: new (element: HTMLElement, options: Record<string, unknown>) => unknown;
+    Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMapInstance;
+    Geocoder: new () => { geocode(request: { address: string }, callback: (results: Array<{ geometry?: { location?: { lat(): number; lng(): number } } }> | null, status: string) => void): void };
   };
 };
+
+type GoogleMapInstance = { setCenter(center: { lat: number; lng: number }): void; setZoom(zoom: number): void };
 
 declare global {
   interface Window { google?: GoogleMaps }
@@ -149,6 +153,8 @@ function RanchMap({
   onAddLine,
   onAddGate,
   onUndo,
+  address,
+  onAddressResolved,
 }: {
   allLines: FenceLine[];
   selectedIds: string[];
@@ -160,9 +166,12 @@ function RanchMap({
   onAddLine: (line: FenceLine) => void;
   onAddGate: (gate: Gate) => void;
   onUndo: () => void;
+  address: string;
+  onAddressResolved: (location: { latitude: number; longitude: number }) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const googleMapRef = useRef<HTMLDivElement>(null);
+  const googleMapInstanceRef = useRef<GoogleMapInstance | null>(null);
   const [draft, setDraft] = useState<Point[]>([]);
   const [mapState, setMapState] = useState<"loading" | "ready" | "missing" | "error">("loading");
 
@@ -176,7 +185,7 @@ function RanchMap({
 
     const startMap = () => {
       if (!window.google?.maps || !googleMapRef.current) return;
-      new window.google.maps.Map(googleMapRef.current, {
+      googleMapInstanceRef.current = new window.google.maps.Map(googleMapRef.current, {
         center: { lat: 31.9825, lng: -98.0336 },
         zoom: 15,
         mapTypeId: "hybrid",
@@ -207,6 +216,18 @@ function RanchMap({
     script.onerror = () => setMapState("error");
     document.head.appendChild(script);
   }, []);
+
+  useEffect(() => {
+    if (mapState !== "ready" || !window.google?.maps || !googleMapInstanceRef.current || !address.trim()) return;
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address }, (results, status) => {
+      const location = status === "OK" ? results?.[0]?.geometry?.location : undefined;
+      if (!location || !googleMapInstanceRef.current) return;
+      googleMapInstanceRef.current.setCenter({ lat: location.lat(), lng: location.lng() });
+      googleMapInstanceRef.current.setZoom(16);
+      onAddressResolved({ latitude: location.lat(), longitude: location.lng() });
+    });
+  }, [address, mapState, onAddressResolved]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -474,7 +495,7 @@ function Chevron() {
 
 export default function Home() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [address, setAddress] = useState("1427 County Road 418, Hico, TX");
+  const [address, setAddress] = useState("16710 Ranch Rd 965, Fredericksburg, TX 78624");
   const [finding, setFinding] = useState(false);
   const [propertyFound, setPropertyFound] = useState(false);
   const [selectedIds, setSelectedIds] = useState(boundaryLines.map((line) => line.id));
@@ -541,11 +562,18 @@ export default function Home() {
     if (!address.trim()) return;
     setFinding(true);
     setLandAnalysisState("loading");
+    setPropertyFound(true);
+    setStep(2);
+    setFinding(false);
+  }
+
+  const analyzeCoordinates = useCallback(async (location: { latitude: number; longitude: number }) => {
+    setLandAnalysisState("loading");
     try {
       const response = await fetch("/api/land-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 31.9825, longitude: -98.0336, parcelId: "01-3842-017" }),
+        body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude }),
       });
       if (!response.ok) throw new Error("Land analysis unavailable");
       setLandAnalysis(await response.json() as LandAnalysis);
@@ -553,11 +581,9 @@ export default function Home() {
     } catch {
       setLandAnalysisState("error");
     } finally {
-      setFinding(false);
-      setPropertyFound(true);
-      setStep(2);
+      // The map remains usable even if a public land-data service is unavailable.
     }
-  }
+  }, []);
 
   function toggleLine(id: string) {
     setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
@@ -627,10 +653,10 @@ export default function Home() {
                 placeholder="Enter an address or APN"
               />
               <button onClick={findProperty} disabled={finding || !address.trim()}>
-                {finding ? "Finding land…" : "Find the ranch"} <Chevron />
+                {finding ? "Finding land…" : "Find the land"} <Chevron />
               </button>
             </div>
-            <button className="sample-link" onClick={() => setAddress("1427 County Road 418, Hico, TX")}>Use sample: Circle B Ranch · 417.8 acres</button>
+            <button className="sample-link" onClick={() => setAddress("16710 Ranch Rd 965, Fredericksburg, TX 78624")}>Use live demo: Enchanted Rock area · Fredericksburg, TX</button>
 
             <div className="how-it-works">
               <div><span>1</span><strong>Find</strong><small>Parcel + land data</small></div>
@@ -665,8 +691,8 @@ export default function Home() {
               <button onClick={() => setStep(1)} aria-label="Return to property search">←</button>
               <div>
                 <span className="verified">✓ Parcel matched</span>
-                <h1>Circle B Ranch</h1>
-                <p>1427 County Road 418 · Hico, Texas · APN 01-3842-017</p>
+                <h1>Land Estimate</h1>
+                <p>{address} · Parcel lookup pending</p>
               </div>
             </div>
             <div className="project-steps" aria-label="Estimate progress">
@@ -708,6 +734,8 @@ export default function Home() {
                 onAddLine={addLine}
                 onAddGate={(gate) => setGates((current) => [...current, gate])}
                 onUndo={undoMapAction}
+                address={address}
+                onAddressResolved={analyzeCoordinates}
               />
 
               <div className="segment-head">

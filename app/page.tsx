@@ -694,18 +694,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="hero-map" aria-hidden="true">
-            <div className="hero-field field-one" />
-            <div className="hero-field field-two" />
-            <div className="hero-parcel"><span>417.8<small>ACRES</small></span></div>
-            <div className="hero-creek" />
-            <div className="hero-fence hero-fence-one" />
-            <div className="hero-fence hero-fence-two" />
-            <div className="hero-pin">R</div>
+          <div className="hero-map">
+            <img className="hero-terrain-image" src="/ranchline-hero-terrain.png" alt="Aerial ranch view showing easy pasture, brush route and difficult creek crossing fence conditions" />
+            <div className="hero-map-label easy"><b>Easy</b><span>Pasture only</span></div>
+            <div className="hero-map-label brush"><b>Moderate</b><span>Brush clearing</span></div>
+            <div className="hero-map-label creek"><b>Difficult</b><span>Creek crossing</span></div>
+            <div className="hero-map-key"><span><i className="risk-low" /> Open pasture</span><span><i className="risk-medium" /> Brush</span><span><i className="risk-high" /> Creek / grade</span></div>
             <div className="hero-quote">
-              <span>Planning estimate</span>
-              <strong>$86,400–$95,300</strong>
-              <small>18,640 ft · 5-strand barbed wire</small>
+              <span>See what changes the price</span>
+              <strong>Know the land before you quote.</strong>
+              <small>Routes, brush, water crossings, slope and equipment access—explained in seconds.</small>
             </div>
           </div>
         </section>
